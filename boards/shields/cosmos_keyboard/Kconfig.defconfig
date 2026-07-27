@@ -1,0 +1,78 @@
+if SHIELD_COSMOS_KEYBOARD_LEFT
+
+# Name must be less than 16 characters long!
+config ZMK_KEYBOARD_NAME
+    default "Cosmos Keyboard"
+
+config ZMK_SPLIT_ROLE_CENTRAL
+    default y
+
+config ZMK_SPLIT_BLE_CENTRAL_PERIPHERALS
+  default 1
+
+config BT_MAX_CONN
+  default 6
+
+config BT_MAX_PAIRED
+  default 6
+
+endif
+
+if SHIELD_COSMOS_KEYBOARD_LEFT || SHIELD_COSMOS_KEYBOARD_RIGHT
+
+config ZMK_SPLIT
+    default y
+
+config ZMK_POINTING
+    default y
+
+endif
+
+# --- Pinctrl Kconfig for part "left" ---
+if BOARD_NICE_NANO_V2 && SHIELD_COSMOS_KEYBOARD_LEFT
+
+config SPI
+    default y
+
+config PMW3610
+    default y
+
+endif
+
+# --- Pinctrl Kconfig for part "right" ---
+if BOARD_NICE_NANO_V2 && SHIELD_COSMOS_KEYBOARD_RIGHT
+
+config I2C
+    default y
+
+config ZMK_DISPLAY
+    default y
+
+if ZMK_DISPLAY
+
+config I2C
+    default y
+
+config SSD1306
+    default y
+
+endif # ZMK_DISPLAY
+
+if LVGL
+
+config LV_Z_VDB_SIZE
+    default 64
+
+config LV_DPI_DEF
+    default 148
+
+config LV_Z_BITS_PER_PIXEL
+    default 1
+
+choice LV_COLOR_DEPTH
+    default LV_COLOR_DEPTH_1
+endchoice
+
+endif # LVGL
+
+endif
