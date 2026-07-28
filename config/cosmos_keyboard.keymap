@@ -1,7 +1,37 @@
 #include <behaviors.dtsi>
+#include <input/processors.dtsi>
 #include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/pointing.h>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
+
+#define BASE   0
+#define NAV    1
+#define MOUSE  2
+#define SCROLL 3
+
+// One wheel click per encoder detent. &msc emits
+// speed * trigger-period-ms / 1000 per tick, so with its 16ms period the value
+// must be >= 63 to produce a full click. Raise for faster scrolling.
+// (The stock SCRL_UP/SCRL_DOWN of 10 are tuned for a held key, not a detent.)
+#define ENC_SCRL_UP   MOVE_Y(63)
+#define ENC_SCRL_DOWN MOVE_Y(-63)
 
 / {
+    behaviors {
+        // Mouse scroll on an encoder. Wraps the stock &msc, which already has
+        // acceleration disabled and an input listener attached.
+        //
+        // tap-ms must exceed &msc's 16ms trigger-period-ms: the sensor-rotate
+        // behavior queues press -> wait tap-ms -> release, and the release
+        // cancels &msc's tick work. At the default 5ms nothing scrolls at all.
+        inc_dec_msc: inc_dec_msc {
+            compatible = "zmk,behavior-sensor-rotate-var";
+            #sensor-binding-cells = <2>;
+            bindings = <&msc>, <&msc>;
+            tap-ms = <20>;
+        };
+    };
+
     keymap {
         compatible = "zmk,keymap";
 
@@ -13,14 +43,17 @@
 &kp CAPS   &kp A   &kp S      &kp D      &kp F     &kp G                               &kp H      &kp J   &kp K      &kp L     &kp SEMI  &kp APOS
 &kp LSHFT  &kp Z   &kp X      &kp C      &kp V     &kp B                               &kp N      &kp M   &kp COMMA  &kp DOT   &kp FSLH  &kp RSHFT
                    &kp MINUS  &kp EQUAL                                                                   &kp LBKT   &kp RBKT
-                              &kp SPACE  &mo 0     &kp LGUI                            &kp SPACE  &mo 0   &kp ENTER
-                              &kp LCTRL  &kp LALT                                      &mo 0
+                              &kp SPACE  &mo NAV   &kp LGUI                            &kp SPACE  &mo NAV &kp ENTER
+                              &kp LCTRL  &kp LALT                                      &mo NAV
             >;
 
-            sensor-bindings = <&inc_dec_kp A B &inc_dec_kp C D &inc_dec_kp E F>;
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                              <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                              <&inc_dec_msc ENC_SCRL_UP ENC_SCRL_DOWN>;
         };
 
         nav {
+            display-name = "Nav";
             bindings = <
 &trans  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans  &trans
 &trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans  &trans  &trans  &trans  &trans  &trans
@@ -31,7 +64,65 @@
                         &trans  &trans                            &trans
             >;
 
-            label = "Nav";
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                              <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                              <&inc_dec_msc ENC_SCRL_UP ENC_SCRL_DOWN>;
         };
+
+        // Activated automatically while the trackball is moving, via the
+        // zip_temp_layer input processor on &input_listener_left0 below.
+        mouse {
+            display-name = "Mous";
+            bindings = <
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans     &trans     &trans     &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans  &trans  &trans
+                &trans  &trans                                                          &trans     &trans
+                        &trans  &trans  &trans                    &mkp LCLK  &mkp MCLK  &mkp RCLK
+                        &trans  &trans                            &mo SCROLL
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                              <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                              <&inc_dec_msc ENC_SCRL_UP ENC_SCRL_DOWN>;
+        };
+
+        // Held from the mouse layer. Exists so the input listener can remap
+        // trackball movement onto the scroll wheel while it is active.
+        scroll {
+            display-name = "Scrl";
+            bindings = <
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans  &trans
+                &trans  &trans                                                    &trans  &trans
+                        &trans  &trans  &trans                    &trans  &trans  &trans
+                        &trans  &trans                            &trans
+            >;
+
+            sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                              <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                              <&inc_dec_msc ENC_SCRL_UP ENC_SCRL_DOWN>;
+        };
+    };
+};
+
+// Without this, pressing any key - including the mouse layer's own click keys -
+// would immediately drop the layer. These are the right thumb cluster positions.
+&zip_temp_layer {
+    excluded-positions = <57 58 59 62>;
+};
+
+// Trackball behaviour. The listener runs on the right half (the central);
+// the sensor itself is wired to the left and forwarded over the split link.
+&input_listener_left0 {
+    // Hold the mouse layer while the ball moves, drop it 200ms after it stops.
+    input-processors = <&zip_temp_layer MOUSE 200>;
+
+    scroll {
+        layers = <SCROLL>;
+        input-processors = <&zip_xy_to_scroll_mapper>, <&zip_scroll_scaler 1 8>;
     };
 };

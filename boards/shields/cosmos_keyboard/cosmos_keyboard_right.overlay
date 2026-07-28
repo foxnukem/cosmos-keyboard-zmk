@@ -61,6 +61,17 @@
     kscan = <&kscan0>;
 };
 // == Input devices ==
+// This half is the split central, so it hosts the listener for the trackball
+// that is physically wired to the left half. No `device` here: the input-split
+// node is the receiving end, matched to the left's by its `reg`.
+&input_split_left0 {
+    status = "okay";
+};
+
+&input_listener_left0 {
+    status = "okay";
+    device = <&input_split_left0>;
+};
 
 &encoder_right0 {
     a-gpios = <&pro_micro 19 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;

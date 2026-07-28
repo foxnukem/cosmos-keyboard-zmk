@@ -30,9 +30,10 @@
     kscan = <&kscan0>;
 };
 // == Input devices ==
-// Input devices on this central part
-// Enabling input listeners and pointing them to the input devices
-&input_listener_left0 {
+// This half is the split peripheral, so it cannot run an input listener
+// (ZMK gates ZMK_INPUT_LISTENER behind ZMK_SPLIT_ROLE_CENTRAL). Instead the
+// trackball is exposed over the split link; the listener lives on the right.
+&input_split_left0 {
     status = "okay";
     device = <&input_device_left0>;
 };
