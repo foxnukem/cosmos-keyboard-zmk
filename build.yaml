@@ -23,6 +23,19 @@ include:
   - board: nice_nano_v2
     shield: cosmos_keyboard_left
 
+## Trackball diagnostics. Flash this instead of the normal left firmware, plug
+## the LEFT half into USB and open its CDC ACM serial port, then reset.
+## The PMW3610 driver validates the sensor's product ID during init:
+##   * SPI / product-ID error       -> wiring or dead sensor (CS, IRQ, SCK,
+##                                     SDIO, 3V3, GND)
+##   * init OK, no motion events    -> sensor alive; lens, surface or IRQ line
+##   * motion events but no cursor  -> software; the log shows where it stops
+  - board: nice_nano_v2
+    shield: cosmos_keyboard_left
+    snippet: zmk-usb-logging
+    cmake-args: -DCONFIG_PMW3610_LOG_LEVEL_DBG=y
+    artifact-name: cosmos_keyboard_left_trackball_debug
+
 ## To build with ZMK Studio support, uncomment the following block
 ## by removing the leading '#' from each line.
 
