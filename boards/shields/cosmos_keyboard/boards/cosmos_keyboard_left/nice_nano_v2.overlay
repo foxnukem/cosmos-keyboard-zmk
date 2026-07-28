@@ -63,12 +63,9 @@
         // a pause lags badly. Costs idle current on this battery-powered half.
         force-awake;
 
-        // Orientation is handled in the keymap by &zip_xy_transform, not here.
-        // The driver packs swap/invert into bits 7-5 of its page-1 RES_STEP
-        // register (0x85) alongside the CPI value, and setting invert-x had no
-        // observable effect. ZMK's input processor does the same job after the
-        // event leaves the driver, and is covered by ZMK's own tests.
-        // invert-x;
+        // Orientation. Uncomment the others if an axis runs backwards or the
+        // axes end up transposed.
+        invert-x;
         // invert-y;
         // swap-xy;
     };
