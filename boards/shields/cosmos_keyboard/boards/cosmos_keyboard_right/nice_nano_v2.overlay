@@ -42,6 +42,11 @@
 
 &i2c0 {
     oled: ssd1306@3c {
+        // If the panel is a counterfeit/SH1106 rather than a genuine SSD1306,
+        // swap this line for "sinowealth,sh1106-i2c" and set segment-offset
+        // to <2>. SH1106 has 132 columns of RAM against the SSD1306's 128, so
+        // driving one as the other smears the image. Zephyr 3.5 handles both
+        // in the same driver, so nothing else changes.
         compatible = "solomon,ssd1306fb";
         reg = <0x3c>;
         width = <128>;

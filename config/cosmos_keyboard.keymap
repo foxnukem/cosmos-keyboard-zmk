@@ -1,6 +1,7 @@
 #include <behaviors.dtsi>
 #include <input/processors.dtsi>
 #include <dt-bindings/zmk/bt.h>
+#include <dt-bindings/zmk/input_transform.h>
 #include <dt-bindings/zmk/keys.h>
 #include <dt-bindings/zmk/outputs.h>
 #include <dt-bindings/zmk/pointing.h>
@@ -122,6 +123,10 @@
 // Trackball behaviour. The listener runs on the right half (the central);
 // the sensor itself is wired to the left and forwarded over the split link.
 &input_listener_left0 {
-    // Hold the mouse layer while the ball moves, drop it 200ms after it stops.
-    input-processors = <&zip_temp_layer MOUSE 200>;
+    // Invert horizontal movement, then hold the mouse layer while the ball
+    // moves, dropping it 200ms after it stops. Add INPUT_TRANSFORM_Y_INVERT
+    // or INPUT_TRANSFORM_XY_SWAP to the same parameter (they are bit flags,
+    // so combine with |) if the other axes ever need correcting.
+    input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
+                       <&zip_temp_layer MOUSE 200>;
 };
