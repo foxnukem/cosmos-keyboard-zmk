@@ -29,7 +29,10 @@
     pinctrl-0 = <&i2c0_default>;
     pinctrl-1 = <&i2c0_sleep>;
     pinctrl-names = "default", "sleep";
-    clock-frequency = <I2C_BITRATE_FAST>;
+    // Left at the 100kHz default. The wizard generated I2C_BITRATE_FAST
+    // (400kHz), which many SSD1306 modules cannot hold reliably - corrupted
+    // writes show up as scrambled pixels. ZMK's own OLED shields do not
+    // raise the bus speed.
 };
 
 // devices on i2c0

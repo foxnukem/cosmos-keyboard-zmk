@@ -55,8 +55,9 @@
         irq-gpios = <&pro_micro 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
         cpi = <800>;
 
-        // Orientation. Uncomment an invert if an axis runs backwards.
-        swap-xy;
+        // Orientation. Uncomment an invert if an axis runs backwards,
+        // or swap-xy if the axes end up transposed.
+        // swap-xy;
         // invert-x;
         // invert-y;
     };
