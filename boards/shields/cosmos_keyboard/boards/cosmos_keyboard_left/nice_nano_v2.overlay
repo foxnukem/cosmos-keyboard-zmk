@@ -53,12 +53,19 @@
         x-input-code = <INPUT_REL_X>;
         y-input-code = <INPUT_REL_Y>;
         irq-gpios = <&pro_micro 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
-        cpi = <800>;
 
-        // Orientation. Uncomment an invert if an axis runs backwards,
-        // or swap-xy if the axes end up transposed.
-        // swap-xy;
-        // invert-x;
+        // Resolution. Range 200-3200 in steps of 200.
+        cpi = <1600>;
+
+        // Keeps the sensor in RUN mode while ZMK is active. Without it the
+        // driver downshifts to REST1 after 128ms (40ms sampling), REST2 after
+        // 5s (100ms) and REST3 after 17s (500ms), so the first movement after
+        // a pause lags badly. Costs idle current on this battery-powered half.
+        force-awake;
+
+        // Orientation. Uncomment swap-xy if the axes end up transposed.
+        invert-x;
         // invert-y;
+        // swap-xy;
     };
 };

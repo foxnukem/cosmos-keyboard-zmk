@@ -24,7 +24,10 @@
     };
 };
 &i2c0 {
-    compatible = "nordic,nrf-twim";
+    // nice!nano defaults this to nordic,nrf-twi; the wizard overrode it to
+    // -twim, which uses EasyDMA. EasyDMA can only reach RAM, so const command
+    // buffers can transfer as garbage. ZMK's own OLED shields stay on -twi.
+    compatible = "nordic,nrf-twi";
     status = "okay";
     pinctrl-0 = <&i2c0_default>;
     pinctrl-1 = <&i2c0_sleep>;

@@ -11,12 +11,12 @@
 #define MOUSE  2
 #define SYS    3
 
-// One wheel click per encoder detent. &msc emits
-// speed * trigger-period-ms / 1000 per tick, so with its 16ms period the value
-// must be >= 63 to produce a full click. Raise for faster scrolling.
+// Wheel clicks per encoder detent. &msc emits speed * trigger-period-ms / 1000
+// per tick, so with its 16ms period the value is 63 per click: 63 = 1 click,
+// 126 = 2, 189 = 3. Adjust to taste.
 // (The stock SCRL_UP/SCRL_DOWN of 10 are tuned for a held key, not a detent.)
-#define ENC_SCRL_UP   MOVE_Y(63)
-#define ENC_SCRL_DOWN MOVE_Y(-63)
+#define ENC_SCRL_UP   MOVE_Y(126)
+#define ENC_SCRL_DOWN MOVE_Y(-126)
 
 / {
     behaviors {
@@ -51,7 +51,7 @@
 
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                               <&inc_dec_kp C_VOL_UP C_VOL_DN>,
-                              <&inc_dec_msc ENC_SCRL_UP ENC_SCRL_DOWN>;
+                              <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
 
         // F-keys and numbers on the top row, arrows under the right home row,
@@ -70,7 +70,7 @@
 
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                               <&inc_dec_kp C_VOL_UP C_VOL_DN>,
-                              <&inc_dec_msc ENC_SCRL_UP ENC_SCRL_DOWN>;
+                              <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
 
         // Activated automatically while the trackball is moving, via the
@@ -89,7 +89,7 @@
 
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                               <&inc_dec_kp C_VOL_UP C_VOL_DN>,
-                              <&inc_dec_msc ENC_SCRL_UP ENC_SCRL_DOWN>;
+                              <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
 
         // Bluetooth, output routing and firmware entry. Held from the lower
@@ -108,7 +108,7 @@
 
             sensor-bindings = <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                               <&inc_dec_kp C_VOL_UP C_VOL_DN>,
-                              <&inc_dec_msc ENC_SCRL_UP ENC_SCRL_DOWN>;
+                              <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
     };
 };
