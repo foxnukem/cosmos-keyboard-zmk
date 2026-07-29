@@ -55,7 +55,7 @@
         irq-gpios = <&pro_micro 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 
         // Resolution. Range 200-3200 in steps of 200.
-        cpi = <1600>;
+        cpi = <1400>;
 
         // Keeps the sensor in RUN mode while ZMK is active. Without it the
         // driver downshifts to REST1 after 128ms (40ms sampling), REST2 after
@@ -63,9 +63,15 @@
         // a pause lags badly. Costs idle current on this battery-powered half.
         force-awake;
 
-        // Orientation. Uncomment the others if an axis runs backwards or the
-        // axes end up transposed.
-        invert-x;
+        // Orientation is handled in the keymap by &zip_xy_transform, NOT here.
+        // Do not re-enable these. The driver packs swap/invert into bits 7-5
+        // of the page-1 RES_STEP register (0x85) alongside the CPI bits, and
+        // writes the whole thing through a bank-switch sequence it never
+        // verifies. When that write does not stick, orientation and CPI are
+        // lost together and the ball comes back mis-oriented and sluggish
+        // until the next reboot. Correcting orientation downstream, in ZMK,
+        // takes it out of that register's blast radius entirely.
+        // invert-x;
         // invert-y;
         // swap-xy;
     };
