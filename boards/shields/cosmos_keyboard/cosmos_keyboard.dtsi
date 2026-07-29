@@ -22,10 +22,8 @@
     transform = <&matrix_transform0>;
 };
 
-// Encoders for all parts of the keyboard.
-// If the encoder(s) are not behaving as expected,
-// update steps and triggers-per-rotation to match your hardware.
-// All pin assignments are done in the part overlays.
+// Encoders. Pin assignments live in the part overlays; tune steps and
+// triggers-per-rotation to match the hardware.
 
 / {
     encoder_left0: encoder_left0 {

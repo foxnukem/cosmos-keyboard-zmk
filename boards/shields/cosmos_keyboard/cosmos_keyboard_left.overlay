@@ -30,9 +30,8 @@
     kscan = <&kscan0>;
 };
 // == Input devices ==
-// This half is the split peripheral, so it cannot run an input listener
-// (ZMK gates ZMK_INPUT_LISTENER behind ZMK_SPLIT_ROLE_CENTRAL). Instead the
-// trackball is exposed over the split link; the listener lives on the right.
+// Peripheral half: ZMK gates input listeners behind ZMK_SPLIT_ROLE_CENTRAL, so
+// the trackball is exposed over the split link and the listener lives on the right.
 &input_split_left0 {
     status = "okay";
     device = <&input_device_left0>;
@@ -44,9 +43,8 @@
     status = "okay";
 };
 
-// Assigning dummy pins to other part's encoders
-// just to satisfy the devicetree requirements.
-// No code will be compiled for these disabled encoders.
+// Dummy pins for the other part's encoders, to satisfy devicetree. These nodes
+// stay disabled, so nothing is compiled for them.
 &encoder_right0 {
     a-gpios = <&pro_micro 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
     b-gpios = <&pro_micro 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;

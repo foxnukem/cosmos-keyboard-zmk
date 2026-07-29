@@ -54,29 +54,22 @@
         y-input-code = <INPUT_REL_Y>;
         irq-gpios = <&pro_micro 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 
-        // Resolution. Range 200-3200 in steps of 200.
-        //
-        // Deliberately higher than the sensitivity actually wanted: the keymap
-        // trims Y back to 7/10 (1400 effective) and leaves X native. Running
-        // the sensor fine and scaling down beats running it coarse and scaling
-        // up, because scaling up amplifies the sensor's quantization into a
-        // visible wobble on slow, precise movement.
+        // Range 200-3200, step 200. Deliberately above the sensitivity wanted;
+        // the keymap trims Y to 7/10. Scaling down avoids the quantization
+        // wobble that scaling up produces on slow movement.
         cpi = <2000>;
 
-        // Keeps the sensor in RUN mode while ZMK is active. Without it the
-        // driver downshifts to REST1 after 128ms (40ms sampling), REST2 after
-        // 5s (100ms) and REST3 after 17s (500ms), so the first movement after
-        // a pause lags badly. Costs idle current on this battery-powered half.
-        force-awake;
+        // No force-awake, deliberately. It is the only thing that enables the
+        // driver's activity-state handler, which read-modify-writes PERFORMANCE
+        // (0x11) using a read that never turns the sensor's SPI clock on. After
+        // idle that clock is gated, so it reads garbage and writes the garbage
+        // run-rate bits back - the cause of the inverted axes and the random
+        // cursor after sleep. Wake latency is covered by the downshift tuning in
+        // cosmos_keyboard_left.conf instead.
 
-        // Orientation is handled in the keymap by &zip_xy_transform, NOT here.
-        // Do not re-enable these. The driver packs swap/invert into bits 7-5
-        // of the page-1 RES_STEP register (0x85) alongside the CPI bits, and
-        // writes the whole thing through a bank-switch sequence it never
-        // verifies. When that write does not stick, orientation and CPI are
-        // lost together and the ball comes back mis-oriented and sluggish
-        // until the next reboot. Correcting orientation downstream, in ZMK,
-        // takes it out of that register's blast radius entirely.
+        // Leave these off - orientation is done in the keymap by
+        // &zip_xy_transform. The driver packs swap/invert into the same
+        // unverified RES_STEP write as the CPI, so a failed write loses both.
         // invert-x;
         // invert-y;
         // swap-xy;

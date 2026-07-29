@@ -61,9 +61,8 @@
     kscan = <&kscan0>;
 };
 // == Input devices ==
-// This half is the split central, so it hosts the listener for the trackball
-// that is physically wired to the left half. No `device` here: the input-split
-// node is the receiving end, matched to the left's by its `reg`.
+// Central half: hosts the listener for the left half's trackball. No `device`
+// here - this is the receiving end, matched to the left's node by its `reg`.
 &input_split_left0 {
     status = "okay";
 };
@@ -84,9 +83,8 @@
     status = "okay";
 };
 
-// Assigning dummy pins to other part's encoders
-// just to satisfy the devicetree requirements.
-// No code will be compiled for these disabled encoders.
+// Dummy pins for the other part's encoders, to satisfy devicetree. These nodes
+// stay disabled, so nothing is compiled for them.
 &encoder_left0 {
     a-gpios = <&pro_micro 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;
     b-gpios = <&pro_micro 0 (GPIO_ACTIVE_HIGH | GPIO_PULL_UP)>;

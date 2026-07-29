@@ -7,45 +7,28 @@
 #include <dt-bindings/zmk/outputs.h>
 #include <dt-bindings/zmk/pointing.h>
 
-// Layer indices. These must match the order of the nodes under keymap {}
-// below - inserting a layer renumbers everything after it. MOUSE is the one
-// that is actually load-bearing (zip_temp_layer references it); the binding
-// tables use bare numbers to keep their columns aligned.
-//
-// MOUSE and MOUSE_HOLD are the same keys reached two different ways, and they
-// have to be separate layers. ZMK layer state is a bitmask with no reference
-// counting, and zip_temp_layer assumes it solely owns its layer: when its
-// timeout expires it calls zmk_keymap_layer_deactivate() unconditionally. If
-// &mo pointed at the same layer, that timeout would clear the bit out from
-// under a key you were still holding, dropping you to BASE mid-use. Two
-// layers, two bits, neither processor treading on the other.
+// Must match the node order under keymap {} - inserting a layer renumbers
+// everything after it.
 #define BASE        0
 #define NAV         1
 #define MOUSE       2  // trackball-activated, owned by zip_temp_layer
 #define NUM         3
 #define SYS         4
-#define MOUSE_HOLD  5  // thumb-key activated, owned by &mo
+#define MOUSE_HOLD  5  // thumb-key activated, owned by &mo. Must stay separate
+                       // from MOUSE: zip_temp_layer's timeout deactivates its
+                       // layer unconditionally, which would drop a held layer.
 
-// Wheel clicks per encoder detent. &msc emits speed * trigger-period-ms / 1000
-// per tick, so with its 16ms period the value is 63 per click: 63 = 1 click,
-// 126 = 2, 189 = 3. Adjust to taste.
-// (The stock SCRL_UP/SCRL_DOWN of 10 are tuned for a held key, not a detent.)
+// Wheel clicks per encoder detent: 63 per click, since &msc emits
+// speed * trigger-period-ms / 1000 and its period is 16ms. MOVE_Y is the
+// vertical wheel, MOVE_X the horizontal one used on NAV.
 #define ENC_SCRL_UP   MOVE_Y(189)
 #define ENC_SCRL_DOWN MOVE_Y(-189)
-
-// Same detent size on the horizontal wheel, for the NAV layer. &msc carries
-// both axes - MOVE_Y drives INPUT_REL_WHEEL, MOVE_X drives INPUT_REL_HWHEEL -
-// so this needs no extra behavior, just different parameters.
 #define ENC_SCRL_RIGHT MOVE_X(189)
 #define ENC_SCRL_LEFT  MOVE_X(-189)
 
-// The MOUSE and MOUSE_HOLD layers must stay identical, so their key bindings
-// and their encoders are each defined once here and expanded into both. Edit
-// these, never the layer nodes, or the two will drift apart.
-//
-// Positions referenced by zip_temp_layer's excluded-positions are the non-trans
-// ones: 22, 23 (MB4, MB5), 33, 34, 35 (LCLK, MCLK, RCLK) and 57, 59 (thumbs).
-#define MOUSE_LAYER_BINDINGS                                                                        \
+// Expanded into both MOUSE and MOUSE_HOLD, which must stay identical. Edit
+// here, never the layer nodes.
+#define MOUSE_LAYER_BINDINGS                                                                      \
 &trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans  \
 &trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans     &trans     &mkp MB4   &mkp MB5   &trans  &trans  \
 &trans  &trans  &trans  &trans  &trans  &trans                    &trans     &mkp LCLK  &mkp MCLK  &mkp RCLK  &trans  &trans  \
@@ -61,13 +44,9 @@
 
 / {
     behaviors {
-        // Mouse scroll on an encoder. Wraps the stock &msc, which already has
-        // acceleration disabled and an input listener attached.
-        //
-        // tap-ms must exceed &msc's 16ms trigger-period-ms: the sensor-rotate
-        // behavior queues press -> wait tap-ms -> release, and the release
-        // cancels &msc's tick work. At the default 5ms nothing scrolls at all.
-
+        // Mouse scroll on an encoder. tap-ms must exceed &msc's 16ms
+        // trigger-period-ms, or the release cancels &msc's tick work before it
+        // fires and nothing scrolls at all.
         inc_dec_msc: inc_dec_msc {
             compatible = "zmk,behavior-sensor-rotate-var";
             #sensor-binding-cells = <2>;
@@ -80,8 +59,7 @@
     combos {
         compatible = "zmk,combos";
 
-        // Both thumb layer keys together. This is the only way onto SYS, which
-        // holds &bootloader and the bluetooth controls.
+        // Both thumb layer keys together - the only way onto SYS.
         sys_layer {
             bindings = <&mo SYS>;
             key-positions = <54 58>;
@@ -121,20 +99,15 @@
                                   &trans      &trans                              &trans
             >;
 
-            // Scroll encoder goes horizontal on this layer. A layer's own
-            // sensor-bindings win over lower layers: the highest active layer
-            // with a binding returns OPAQUE, and every layer below it has its
-            // accumulated detents discarded rather than fired, so this replaces
-            // MAIN's vertical scroll instead of stacking with it.
+            // Scroll encoder goes horizontal here, replacing MAIN's vertical
+            // scroll rather than stacking with it.
             sensor-bindings =
                 <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                 <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                 <&inc_dec_msc ENC_SCRL_RIGHT ENC_SCRL_LEFT>;
         };
 
-        // Activated automatically while the trackball is moving, via the
-        // zip_temp_layer input processor on &input_listener_left0 below.
-        // Bindings live in MOUSE_LAYER_BINDINGS, shared with mouse_hold.
+        // Raised automatically while the trackball moves, by zip_temp_layer.
         mouse {
             display-name = "MOUSE";
             bindings = <MOUSE_LAYER_BINDINGS>;
@@ -172,12 +145,8 @@
                 <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
 
-        // Identical to `mouse`, but reached by holding the right thumb key
-        // (&mo MOUSE_HOLD) rather than by moving the ball. It exists only so
-        // that zip_temp_layer's timeout, which unconditionally deactivates the
-        // layer it owns, cannot switch off a layer you are still holding.
-        // Same display name on purpose: which mechanism raised the layer is an
-        // implementation detail, and the OLED should read the same either way.
+        // Identical to `mouse`, but held via &mo instead. Same display name on
+        // purpose - the OLED should read the same either way.
         mouse_hold {
             display-name = "MOUSE";
             bindings = <MOUSE_LAYER_BINDINGS>;
@@ -190,48 +159,26 @@
 // so every button the MOUSE layer defines has to be listed or it deactivates
 // the layer it needs and falls through to the layer below.
 //
-// Positions are indices into the bindings array, with rows of 12/14/12/12/4/6/3:
-//   22, 23 - MB4, MB5      (row 2, under I and O)
-//   33, 34, 35 - LCLK, MCLK, RCLK  (row 3, under J, K, L)
-//   57, 58, 59 - LCLK, mo, RCLK    (right thumb cluster)
+// Indices into the bindings array, rows of 12/14/12/12/4/6/3:
+//   22, 23     - MB4, MB5              (row 2, under I and O)
+//   33, 34, 35 - LCLK, MCLK, RCLK      (row 3, under J, K, L)
+//   57, 58, 59 - LCLK, mo, RCLK        (right thumb cluster)
 // Re-count these whenever the MOUSE layer gains or moves a button.
 &zip_temp_layer { excluded-positions = <22 23 33 34 35 57 58 59>; };
 
-// Trackball behaviour. The listener runs on the right half (the central);
-// the sensor itself is wired to the left and forwarded over the split link.
-
+// The sensor is wired to the left half; this listener runs on the right.
 &input_listener_left0 {
-    // Orientation is corrected HERE, in software, and deliberately not with
-    // the driver's invert-x property. The driver packs swap/invert into bits
-    // 7-5 of its page-1 RES_STEP register (0x85) together with the CPI value,
-    // writes it through a fragile bank-switch sequence, and never reads it
-    // back to check. When that write fails to stick - which it does
-    // intermittently after a warm reset, since a reset does not power-cycle
-    // the sensor - the orientation AND the CPI are lost in one go, so the ball
-    // comes back both mis-oriented and sluggish. Applying the transform after
-    // the event leaves the driver cannot fail that way.
+    // Orientation is corrected here rather than with the driver's invert-x, to
+    // keep it out of the unverified RES_STEP write that also carries the CPI.
     // Flags are bits: OR in INPUT_TRANSFORM_Y_INVERT / _XY_SWAP as needed.
     //
-    // Then slow Y down. A wide screen needs far more horizontal cursor travel
-    // than vertical, but rolling the ball sideways takes the same finger motion
-    // as rolling it up, so the two axes need different sensitivities.
+    // Y is trimmed to 7/10 because a wide screen needs more horizontal travel
+    // than vertical. Done as cpi 2000 + scale down, not a lower cpi + scale up,
+    // which visibly amplifies quantization on slow movement. Side effect: a
+    // true 45-degree roll leaves at ~34 degrees. Drop zip_y_scaler to undo.
     //
-    // That difference is deliberately arranged as cpi = 2000 with X unscaled
-    // and Y cut to 7/10 (= 1400 effective), NOT as a lower cpi with X scaled
-    // up. Scaling amplifies quantization: at 1400 cpi a slow roll reports 1
-    // count per event, and <&zip_x_scaler 3 2> turned that into 1, 2, 1, 2...
-    // px - correct on average, but a visible wobble on precise movement, and
-    // only on X. Running the sensor finer and trimming down keeps the average
-    // identical while making each step smaller. X, the axis that gets the most
-    // travel, now has no scaler on it at all.
-    //
-    // Note this still skews diagonals by design: X and Y move at different
-    // rates, so a true 45-degree roll leaves at ~34 degrees. That is inherent
-    // to per-axis sensitivity, not a bug - drop zip_y_scaler to make diagonals
-    // track true, at the cost of X feeling slow again.
-    //
-    // Transform must come before the scaler: if XY_SWAP is ever added, the
-    // scaler needs to act on the post-swap axis, i.e. the real screen axis.
+    // Transform must precede the scaler so a future XY_SWAP scales the real
+    // screen axis.
     input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
                        <&zip_y_scaler 7 10>,
                        <&zip_temp_layer MOUSE 200>;

@@ -1,23 +1,15 @@
 /*
  * ZMK's built-in status screen plus the peripheral half's battery level.
  *
- * Layout on the 128x32 OLED:
+ * Layout on the 128x32 OLED (parenthesised numbers are font sizes):
  *
  *   <bt profile>   (14)       <this half's battery>  (14)
  *   <layer name>   (12)       <other half's battery> (14)
  *
- * The first three are ZMK's own widgets, placed exactly as the built-in
- * status screen places them. Only the bottom-right slot is ours: it occupies
- * the position the WPM widget would use, and shows the left (peripheral)
- * half's charge, which reaches us because
- * CONFIG_ZMK_SPLIT_BLE_CENTRAL_BATTERY_LEVEL_FETCHING is enabled.
- *
- * The two battery readings are unlabelled and told apart by position alone -
- * top right is this half, bottom right is the other. The parenthesised sizes
- * are the fonts, and they matter: only the layer name is deliberately small,
- * everything else inherits the Montserrat 14 default set in
- * cosmos_keyboard_right.conf. Two 14px rows (16px line height) tile exactly
- * into the panel's 32px. Raising that default re-crowds the display.
+ * Only the bottom-right slot is ours; the rest are ZMK's own widgets in their
+ * stock positions. The two battery readings are told apart by position alone.
+ * Font sizes matter: two 14px rows (16px line height) tile exactly into 32px,
+ * so raising the default in cosmos_keyboard_right.conf re-crowds the display.
  */
 
 #include <stdio.h>
@@ -92,10 +84,9 @@ lv_obj_t *zmk_display_status_screen(void) {
                                lv_theme_get_font_small(screen), LV_PART_MAIN);
     lv_obj_align(zmk_widget_layer_status_obj(&layer_status_widget), LV_ALIGN_BOTTOM_LEFT, 0, 0);
 
-    /* No set_style_text_font here on purpose. ZMK's battery widget above sets
-     * no font either, so leaving this one to inherit the theme default is what
-     * keeps the two readings the same size - they cannot drift apart. Pinning a
-     * font here is what made the peripheral reading render smaller. */
+    /* No set_style_text_font here on purpose: ZMK's battery widget above sets
+     * none either, so inheriting the theme default keeps the two readings the
+     * same size. Pinning a font here renders this one smaller. */
     peripheral_battery_label = lv_label_create(screen);
     lv_obj_align(peripheral_battery_label, LV_ALIGN_BOTTOM_RIGHT, 0, 0);
     widget_peripheral_battery_init();
