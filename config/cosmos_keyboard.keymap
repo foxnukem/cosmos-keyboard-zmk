@@ -11,11 +11,20 @@
 // below - inserting a layer renumbers everything after it. MOUSE is the one
 // that is actually load-bearing (zip_temp_layer references it); the binding
 // tables use bare numbers to keep their columns aligned.
-#define BASE   0
-#define NAV    1
-#define MOUSE  2
-#define NUM    3
-#define SYS    4
+//
+// MOUSE and MOUSE_HOLD are the same keys reached two different ways, and they
+// have to be separate layers. ZMK layer state is a bitmask with no reference
+// counting, and zip_temp_layer assumes it solely owns its layer: when its
+// timeout expires it calls zmk_keymap_layer_deactivate() unconditionally. If
+// &mo pointed at the same layer, that timeout would clear the bit out from
+// under a key you were still holding, dropping you to BASE mid-use. Two
+// layers, two bits, neither processor treading on the other.
+#define BASE        0
+#define NAV         1
+#define MOUSE       2  // trackball-activated, owned by zip_temp_layer
+#define NUM         3
+#define SYS         4
+#define MOUSE_HOLD  5  // thumb-key activated, owned by &mo
 
 // Wheel clicks per encoder detent. &msc emits speed * trigger-period-ms / 1000
 // per tick, so with its 16ms period the value is 63 per click: 63 = 1 click,
@@ -29,6 +38,26 @@
 // so this needs no extra behavior, just different parameters.
 #define ENC_SCRL_RIGHT MOVE_X(189)
 #define ENC_SCRL_LEFT  MOVE_X(-189)
+
+// The MOUSE and MOUSE_HOLD layers must stay identical, so their key bindings
+// and their encoders are each defined once here and expanded into both. Edit
+// these, never the layer nodes, or the two will drift apart.
+//
+// Positions referenced by zip_temp_layer's excluded-positions are the non-trans
+// ones: 22, 23 (MB4, MB5), 33, 34, 35 (LCLK, MCLK, RCLK) and 57, 59 (thumbs).
+#define MOUSE_LAYER_BINDINGS                                                                        \
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans  \
+&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans     &trans     &mkp MB4   &mkp MB5   &trans  &trans  \
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &mkp LCLK  &mkp MCLK  &mkp RCLK  &trans  &trans  \
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans  \
+                &trans  &trans                                                          &trans     &trans             \
+                        &trans  &trans  &trans                    &mkp LCLK  &trans     &mkp RCLK                     \
+                        &trans  &trans                            &trans
+
+#define MOUSE_LAYER_SENSORS                                                                         \
+                <&inc_dec_kp C_VOL_UP C_VOL_DN>,                                                    \
+                <&inc_dec_kp C_VOL_UP C_VOL_DN>,                                                    \
+                <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>
 
 / {
     behaviors {
@@ -70,7 +99,7 @@
 &kp CAPS   &kp A   &kp S      &kp D      &kp F      &kp G                               &kp H      &kp J   &kp K      &kp L     &kp SEMI  &kp APOS
 &kp LSHFT  &kp Z   &kp X      &kp C      &kp V      &kp B                               &kp N      &kp M   &kp COMMA  &kp DOT   &kp FSLH  &kp RSHFT
                    &kp MINUS  &kp EQUAL                                                                    &kp LBKT   &kp RBKT
-                              &mo 1      &kp SPACE  &kp LGUI                            &kp SPACE  &mo 2   &kp ENTER
+                              &mo 1      &kp SPACE  &kp LGUI                            &kp SPACE  &mo 5   &kp ENTER
                               &kp LCTRL  &kp LALT                                       &mo 3
             >;
 
@@ -105,22 +134,11 @@
 
         // Activated automatically while the trackball is moving, via the
         // zip_temp_layer input processor on &input_listener_left0 below.
+        // Bindings live in MOUSE_LAYER_BINDINGS, shared with mouse_hold.
         mouse {
             display-name = "MOUSE";
-            bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans     &trans     &mkp MB4   &mkp MB5   &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &mkp LCLK  &mkp MCLK  &mkp RCLK  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans
-                &trans  &trans                                                          &trans     &trans
-                        &trans  &trans  &trans                    &mkp LCLK  &trans     &mkp RCLK
-                        &trans  &trans                            &trans
-            >;
-
-            sensor-bindings =
-                <&inc_dec_kp C_VOL_UP C_VOL_DN>,
-                <&inc_dec_kp C_VOL_UP C_VOL_DN>,
-                <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
+            bindings = <MOUSE_LAYER_BINDINGS>;
+            sensor-bindings = MOUSE_LAYER_SENSORS;
         };
 
         num {
@@ -153,6 +171,18 @@
                 <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                 <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
+
+        // Identical to `mouse`, but reached by holding the right thumb key
+        // (&mo MOUSE_HOLD) rather than by moving the ball. It exists only so
+        // that zip_temp_layer's timeout, which unconditionally deactivates the
+        // layer it owns, cannot switch off a layer you are still holding.
+        // Same display name on purpose: which mechanism raised the layer is an
+        // implementation detail, and the OLED should read the same either way.
+        mouse_hold {
+            display-name = "MOUSE";
+            bindings = <MOUSE_LAYER_BINDINGS>;
+            sensor-bindings = MOUSE_LAYER_SENSORS;
+        };
     };
 };
 
@@ -182,16 +212,27 @@
     // the event leaves the driver cannot fail that way.
     // Flags are bits: OR in INPUT_TRANSFORM_Y_INVERT / _XY_SWAP as needed.
     //
-    // Then scale X. A wide screen needs far more horizontal cursor travel than
-    // vertical, but rolling the ball sideways takes the same finger motion as
-    // rolling it up, so X reads as sluggish at the sensor's single cpi. Try
-    // 3/2 for 16:10-ish, 16/9 or 2/1 if it still feels slow, 5/4 if it
-    // overshoots. The stock zip_x_scaler sets track-remainders, so the
-    // fraction carries across events and slow precise movement survives.
+    // Then slow Y down. A wide screen needs far more horizontal cursor travel
+    // than vertical, but rolling the ball sideways takes the same finger motion
+    // as rolling it up, so the two axes need different sensitivities.
+    //
+    // That difference is deliberately arranged as cpi = 2000 with X unscaled
+    // and Y cut to 7/10 (= 1400 effective), NOT as a lower cpi with X scaled
+    // up. Scaling amplifies quantization: at 1400 cpi a slow roll reports 1
+    // count per event, and <&zip_x_scaler 3 2> turned that into 1, 2, 1, 2...
+    // px - correct on average, but a visible wobble on precise movement, and
+    // only on X. Running the sensor finer and trimming down keeps the average
+    // identical while making each step smaller. X, the axis that gets the most
+    // travel, now has no scaler on it at all.
+    //
+    // Note this still skews diagonals by design: X and Y move at different
+    // rates, so a true 45-degree roll leaves at ~34 degrees. That is inherent
+    // to per-axis sensitivity, not a bug - drop zip_y_scaler to make diagonals
+    // track true, at the cost of X feeling slow again.
     //
     // Transform must come before the scaler: if XY_SWAP is ever added, the
-    // scaler needs to act on the post-swap X, i.e. the real screen-horizontal.
+    // scaler needs to act on the post-swap axis, i.e. the real screen axis.
     input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
-                       <&zip_x_scaler 3 2>,
+                       <&zip_y_scaler 7 10>,
                        <&zip_temp_layer MOUSE 200>;
 };

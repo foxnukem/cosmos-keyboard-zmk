@@ -55,7 +55,13 @@
         irq-gpios = <&pro_micro 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 
         // Resolution. Range 200-3200 in steps of 200.
-        cpi = <1400>;
+        //
+        // Deliberately higher than the sensitivity actually wanted: the keymap
+        // trims Y back to 7/10 (1400 effective) and leaves X native. Running
+        // the sensor fine and scaling down beats running it coarse and scaling
+        // up, because scaling up amplifies the sensor's quantization into a
+        // visible wobble on slow, precise movement.
+        cpi = <2000>;
 
         // Keeps the sensor in RUN mode while ZMK is active. Without it the
         // driver downshifts to REST1 after 128ms (40ms sampling), REST2 after
