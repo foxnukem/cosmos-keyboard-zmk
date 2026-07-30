@@ -54,18 +54,19 @@
         y-input-code = <INPUT_REL_Y>;
         irq-gpios = <&pro_micro 1 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
 
-        // Range 200-3200, step 200. Deliberately above the sensitivity wanted;
-        // the keymap trims Y to 7/10. Scaling down avoids the quantization
+        // Range 200-3200, step 200; a non-multiple is silently truncated, and
+        // out of range aborts init. Kept above the sensitivity wanted so the
+        // keymap can trim Y to 7/10 - scaling down avoids the quantization
         // wobble that scaling up produces on slow movement.
-        cpi = <2000>;
+        // Effective: X 1800, Y 1260. Step 200 at a time to retune.
+        cpi = <1800>;
 
         // No force-awake, deliberately. It is the only thing that enables the
         // driver's activity-state handler, which read-modify-writes PERFORMANCE
         // (0x11) using a read that never turns the sensor's SPI clock on. After
-        // idle that clock is gated, so it reads garbage and writes the garbage
-        // run-rate bits back - the cause of the inverted axes and the random
-        // cursor after sleep. Wake latency is covered by the downshift tuning in
-        // cosmos_keyboard_left.conf instead.
+        // idle that clock is gated, so it can read garbage and write the garbage
+        // run-rate bits back, or leave force-awake stuck on. Wake latency is
+        // covered by the downshift tuning in cosmos_keyboard_left.conf instead.
 
         // Leave these off - orientation is done in the keymap by
         // &zip_xy_transform. The driver packs swap/invert into the same
