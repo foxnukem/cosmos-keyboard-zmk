@@ -48,7 +48,15 @@
         status = "okay";
         compatible = "pixart,pmw3610";
         reg = <0>;
-        spi-max-frequency = <2000000>;
+        // 1MHz, not the 2MHz this part will take. MOSI and MISO share P0.17
+        // (3-wire SDIO), so the nRF drives the line during every read's data
+        // phase while the sensor drives it too. Halving the clock doubles the
+        // timing margin on that contention; a 7-byte burst costs 56us instead
+        // of 28us, which is nothing next to the read rate. Aimed at the fault
+        // where RES_STEP changes at runtime - that register packs SWAP_XY and
+        // CPI, so a corrupt value swaps the axes and drops sensitivity at once,
+        // and nothing rewrites it until the next power cycle.
+        spi-max-frequency = <1000000>;
         evt-type = <INPUT_EV_REL>;
         x-input-code = <INPUT_REL_X>;
         y-input-code = <INPUT_REL_Y>;
@@ -60,8 +68,8 @@
         // scaling up produces on slow movement. Raising it also lowers the speed
         // at which the sensor's 12-bit delta registers wrap (see REST3 in
         // cosmos_keyboard_left.conf), so it is not a free knob.
-        // Effective: X ~1260, Y ~900 - the keymap rotates 90 and trims Y to 1/2,
-        // and the sensor's raw axes differ ~0.7 in gain. Step 200 to retune.
+        // Effective: X 1800, Y ~880 - the keymap trims Y to 7/10 on top of the
+        // sensor's own ~0.7 raw gain gap between axes. Step 200 to retune.
         cpi = <1800>;
 
         // No force-awake, deliberately. It is the only thing that enables the

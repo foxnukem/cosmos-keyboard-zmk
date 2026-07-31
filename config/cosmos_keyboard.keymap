@@ -181,28 +181,31 @@
     // Orientation is corrected here rather than with the driver's invert-x, to
     // keep it out of the RES_STEP write that also carries the CPI.
     //
-    // The sensor is mounted 90 degrees off, so this is a rotation, not a mirror.
-    // A rotation is XY_SWAP plus exactly one invert - XY_SWAP alone transposes.
-    // The processor swaps the event's code first and only then tests the invert
-    // flags, so an invert names the DESTINATION axis. Xs/Ys are raw sensor:
-    //   XY_SWAP | X_INVERT -> X=-Ys, Y=+Xs   (this one, verified on hardware)
-    //   XY_SWAP | Y_INVERT -> X=+Ys, Y=-Xs
-    // Stated as algebra on purpose. Clockwise is ambiguous here: it does not say
-    // whether the sensor or the data is being rotated, and HID Y is positive-
-    // down, so handedness flips against the usual y-up convention.
-    // The two options are 180 apart, so retune empirically: both axes backwards
-    // means switch the invert; exactly one axis backwards means it is not a pure
-    // rotation and the sensor is mirrored too - use XY_SWAP alone or both.
+    // Sensor axes already line up with the ball: raw X carries left/right, raw Y
+    // near/far. No XY_SWAP. Verified by rolling the ball and reading raw values,
+    // which give ball-right -> Xs<0 and ball-away -> Ys<0, so X_INVERT alone
+    // lands ball-right on cursor-right and ball-away on cursor-up.
+    //
+    // Do not re-derive this from a reading taken while the axes are misbehaving
+    // - that fault presents as a swap and once sent us to a 90 degree rotation
+    // that was wrong in normal use. Verify orientation only from a good state.
+    //
+    // The processor rewrites the event code before testing the invert flags, so
+    // under XY_SWAP an invert names the DESTINATION axis. Xs/Ys raw:
+    //   none      -> X=+Xs, Y=+Ys      XY_SWAP           -> X=+Ys, Y=+Xs
+    //   X_INVERT  -> X=-Xs, Y=+Ys      XY_SWAP|X_INVERT  -> X=-Ys, Y=+Xs
+    //   Y_INVERT  -> X=+Xs, Y=-Ys      XY_SWAP|Y_INVERT  -> X=+Ys, Y=-Xs
+    // HID Y is positive-down, so "clockwise" is not a usable spec here.
     //
     // cpi sets overall speed, this scaler sets the X:Y ratio - but the sensor's
-    // raw axes are not equal gain. Measured Ys/Xs ~0.7, which is geometric, not
-    // firmware: RES_STEP carries one CPI field covering both axes. The rotation
-    // feeds screen X from the weak axis and screen Y from the strong one, so
-    // the trim has to close that 0.7 gap before it buys any width at all:
-    //   screenX : screenY = 0.7 * (d/m)
-    // 1/2 gives 1.4:1, near the 1.43 that a wide screen wanted. Effective at
-    // cpi 1800: X ~1260, Y ~900 - both down ~30% from pre-rotation, since the
-    // weak axis now drives the axis that used to be driven by the strong one.
+    // raw axes are not equal gain. Measured Ys/Xs ~0.7, geometric rather than
+    // firmware: RES_STEP carries one CPI field covering both axes. Screen Y is
+    // fed by the weak axis, so 0.7 of the trim is already there for free and
+    // the scaler multiplies on top of it:
+    //   screenX : screenY = 1.43 * (d/m)
+    // 7/10 gives ~2:1 at X 1800 / Y ~880. A wide screen wants ~2.4:1, which is
+    // 3/5 - but that drops Y to ~756. Holding Y near 1260 at 2.4:1 needs the
+    // speed from cpi instead: cpi 3000 with 3/5.
     //
     // Keep the multiplier small. scale_val() truncates event->value * mul to
     // int16_t, so a larger one shrinks the headroom before the sign wraps -
@@ -210,7 +213,7 @@
     //
     // Transform must precede the scaler: the swap rewrites the event code, so
     // ordered this way the trim lands on screen-vertical rather than sensor-Y.
-    input-processors = <&zip_xy_transform (INPUT_TRANSFORM_XY_SWAP | INPUT_TRANSFORM_X_INVERT)>,
-                       <&zip_y_scaler 1 2>,
+    input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
+                       <&zip_y_scaler 7 10>,
                        <&zip_temp_layer MOUSE 200>;
 };
