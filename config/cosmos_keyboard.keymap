@@ -182,14 +182,19 @@
     // keep it out of the unverified RES_STEP write that also carries the CPI.
     // Flags are bits: OR in INPUT_TRANSFORM_Y_INVERT / _XY_SWAP as needed.
     //
-    // Y is trimmed to 7/10 because a wide screen needs more horizontal travel
-    // than vertical. Done as cpi 2000 + scale down, not a lower cpi + scale up,
-    // which visibly amplifies quantization on slow movement. Side effect: a
-    // true 45-degree roll leaves at ~34 degrees. Drop zip_y_scaler to undo.
+    // Two independent knobs: cpi sets overall speed, this scaler sets the X:Y
+    // ratio. 7/10 under-compensated a wide screen - horizontal traverse is
+    // ~2.4x the vertical one, so 1.43:1 still felt slow sideways. 2/3 at cpi
+    // 1800 gives X 1800 / Y 1200: 1.5:1, with vertical held near the 1260 that
+    // felt right. Side effect: a true 45-degree roll leaves at ~34.
+    //
+    // Keep the multiplier small. scale_val() truncates event->value * mul to
+    // int16_t, so a larger one shrinks the headroom before the sign wraps -
+    // 16383 counts at mul 2, against 4681 at the 7 this replaced.
     //
     // Transform must precede the scaler so a future XY_SWAP scales the real
     // screen axis.
     input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
-                       <&zip_y_scaler 7 10>,
+                       <&zip_y_scaler 2 3>,
                        <&zip_temp_layer MOUSE 200>;
 };

@@ -5,6 +5,17 @@ include:
   - board: nice_nano_v2
     shield: cosmos_keyboard_left
 
+# Trackball debug build. Logs one `x/y: %d/%d` line per sensor sample over USB
+# serial, plus the CPI and downshift writes at init. The snippet is required:
+# CONFIG_PMW3610_LOG_LEVEL_DBG needs a cdc-acm node and a zephyr,console entry,
+# so as bare Kconfig in a .conf the build aborts. Flash the left half with it,
+# read timestamp deltas between `x/y:` lines to get the sensor's RUN rate.
+  - board: nice_nano_v2
+    shield: cosmos_keyboard_left
+    snippet: zmk-usb-logging
+    cmake-args: -DCONFIG_PMW3610_LOG_LEVEL_DBG=y
+    artifact-name: cosmos_keyboard_left_trackball_debug
+
 ## To build with ZMK Studio support, uncomment the following block
 ## by removing the leading '#' from each line.
 

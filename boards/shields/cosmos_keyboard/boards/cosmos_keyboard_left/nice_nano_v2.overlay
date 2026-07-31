@@ -56,9 +56,11 @@
 
         // Range 200-3200, step 200; a non-multiple is silently truncated, and
         // out of range aborts init. Kept above the sensitivity wanted so the
-        // keymap can trim Y to 7/10 - scaling down avoids the quantization
-        // wobble that scaling up produces on slow movement.
-        // Effective: X 1800, Y 1260. Step 200 at a time to retune.
+        // keymap can trim Y - scaling down avoids the quantization wobble that
+        // scaling up produces on slow movement. Raising it also lowers the speed
+        // at which the sensor's 12-bit delta registers wrap (see REST3 in
+        // cosmos_keyboard_left.conf), so it is not a free knob.
+        // Effective: X 1800, Y 1200 (keymap trims Y to 2/3). Step 200 to retune.
         cpi = <1800>;
 
         // No force-awake, deliberately. It is the only thing that enables the
