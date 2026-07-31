@@ -5,16 +5,19 @@ include:
   - board: nice_nano_v2
     shield: cosmos_keyboard_left
 
-# Trackball debug build. Logs one `x/y: %d/%d` line per sensor sample over USB
-# serial, plus the CPI and downshift writes at init. The snippet is required:
-# CONFIG_PMW3610_LOG_LEVEL_DBG needs a cdc-acm node and a zephyr,console entry,
-# so as bare Kconfig in a .conf the build aborts. Flash the left half with it,
-# read timestamp deltas between `x/y:` lines to get the sensor's RUN rate.
-  - board: nice_nano_v2
-    shield: cosmos_keyboard_left
-    snippet: zmk-usb-logging
-    cmake-args: -DCONFIG_PMW3610_LOG_LEVEL_DBG=y
-    artifact-name: cosmos_keyboard_left_trackball_debug
+## Trackball debug build - uncomment the block below to bring it back.
+## Logs one `x/y: %d/%d` line per sensor sample over USB serial (raw, before any
+## input processor), the CPI and downshift writes at init, and the CPI re-asserts
+## from src/pmw3610_cpi_reassert.c. The snippet is required: PMW3610_LOG_LEVEL_DBG
+## needs a cdc-acm node and a zephyr,console entry, so as bare Kconfig in a .conf
+## the build aborts. Note the log buffer overruns during sustained motion, so
+## timestamp gaps are only trustworthy while no `messages dropped` lines appear.
+
+#  - board: nice_nano_v2
+#    shield: cosmos_keyboard_left
+#    snippet: zmk-usb-logging
+#    cmake-args: -DCONFIG_PMW3610_LOG_LEVEL_DBG=y
+#    artifact-name: cosmos_keyboard_left_trackball_debug
 
 ## To build with ZMK Studio support, uncomment the following block
 ## by removing the leading '#' from each line.
