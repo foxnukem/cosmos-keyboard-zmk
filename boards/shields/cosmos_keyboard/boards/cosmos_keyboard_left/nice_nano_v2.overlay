@@ -48,15 +48,12 @@
         status = "okay";
         compatible = "pixart,pmw3610";
         reg = <0>;
-        // 1MHz, not the 2MHz this part will take. MOSI and MISO share P0.17
-        // (3-wire SDIO), so the nRF drives the line during every read's data
-        // phase while the sensor drives it too. Halving the clock doubles the
-        // timing margin on that contention; a 7-byte burst costs 56us instead
-        // of 28us, which is nothing next to the read rate. Aimed at the fault
-        // where RES_STEP changes at runtime - that register packs SWAP_XY and
-        // CPI, so a corrupt value swaps the axes and drops sensitivity at once,
-        // and nothing rewrites it until the next power cycle.
-        spi-max-frequency = <1000000>;
+        // MOSI and MISO share P0.17 (3-wire SDIO), so the nRF drives the line
+        // during every read's data phase while the sensor drives it too. 1MHz
+        // was tried to buy timing margin on that contention and did NOT stop
+        // the runtime RES_STEP corruption, so it is back at 2MHz rather than
+        // paying double bus occupancy for nothing. See src/pmw3610_cpi_reassert.c.
+        spi-max-frequency = <2000000>;
         evt-type = <INPUT_EV_REL>;
         x-input-code = <INPUT_REL_X>;
         y-input-code = <INPUT_REL_Y>;
