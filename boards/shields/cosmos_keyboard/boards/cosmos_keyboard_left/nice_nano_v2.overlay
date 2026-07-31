@@ -60,7 +60,8 @@
         // scaling up produces on slow movement. Raising it also lowers the speed
         // at which the sensor's 12-bit delta registers wrap (see REST3 in
         // cosmos_keyboard_left.conf), so it is not a free knob.
-        // Effective: X 1800, Y 1200 (keymap trims Y to 2/3). Step 200 to retune.
+        // Effective: X ~1260, Y ~900 - the keymap rotates 90 and trims Y to 1/2,
+        // and the sensor's raw axes differ ~0.7 in gain. Step 200 to retune.
         cpi = <1800>;
 
         // No force-awake, deliberately. It is the only thing that enables the
