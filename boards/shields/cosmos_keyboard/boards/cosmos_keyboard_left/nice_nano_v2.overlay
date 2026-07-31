@@ -33,14 +33,15 @@
     pinctrl-1 = <&spi0_sleep>;
     pinctrl-names = "default", "sleep";
 
-    // 0x00, not Zephyr's 0xff default. ORC is clocked out whenever the TX
-    // buffer is spent but the transfer continues for RX - so for 7 of the 8
-    // bytes of every motion burst read. MOSI and MISO share P0.17, so those
-    // bytes land on the wire the sensor is driving, and in this part's protocol
-    // the address MSB is the write bit: 0xff decodes as "write register 0x7f",
-    // the page select that unlocks the bank holding RES_STEP. 0x00 decodes as a
-    // read of register 0x00 instead, which is inert.
-    overrun-character = <0x00>;
+    // Leave at Zephyr's 0xff default. ORC is clocked out for 7 of the 8 bytes
+    // of every motion burst read, and MOSI/MISO share P0.17, so those bytes go
+    // onto the wire the sensor is driving. 0x00 was tried because in this
+    // part's protocol the address MSB is the write bit, making 0xff decode as
+    // "write register 0x7f" - the page select for the bank holding RES_STEP.
+    // It made reads garbage: driving the shared line low fights the sensor's
+    // data, so deltas came back huge and the cursor went random. 0xff is what
+    // lets the sensor win the line. Do not set this to 0x00.
+    // overrun-character = <0x00>;
 };
 
 // devices on spi0
