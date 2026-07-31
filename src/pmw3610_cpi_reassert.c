@@ -42,14 +42,29 @@ LOG_MODULE_REGISTER(pmw3610_cpi_reassert, CONFIG_ZMK_LOG_LEVEL);
  */
 #define PMW3610_ATTR_CPI 0
 
-/* Long enough that a pause mid-drag does not trigger a write, short enough that
- * a corrupted register is not lived with. */
-#define SETTLE_MS 1000
+/* Quiet time after the last event before re-asserting. Bounds how long a
+ * corrupted register is lived with once you stop moving. */
+#define SETTLE_MS 300
+
+/* Ceiling on the gap between re-asserts while motion is continuous, so a
+ * sustained drag does not hold a corrupted register for its whole duration.
+ * Deliberately large: this is the only path that writes mid-motion, and writes
+ * on this bus are the suspected corruption source in the first place (see
+ * overrun-character in the left board overlay). Lower it only if the fault
+ * still bites during long drags after that fix. */
+#define MAX_INTERVAL_MS 30000
+
+/* 32-bit uptime, not 64: written by the workqueue and read by the input thread,
+ * and a 32-bit aligned access is single-instruction here while a 64-bit one is
+ * not. Unsigned subtraction stays correct across the ~49 day wrap. */
+static uint32_t last_reassert_ms;
 
 static void reassert_cpi(struct k_work *work) {
     ARG_UNUSED(work);
 
     const struct device *trackball = TRACKBALL_DEV;
+
+    last_reassert_ms = k_uptime_get_32();
 
     if (!device_is_ready(trackball)) {
         return;
@@ -65,7 +80,10 @@ static void reassert_cpi(struct k_work *work) {
         /* -EBUSY means init never completed, so the sensor is dead anyway. */
         LOG_WRN("CPI re-assert failed (%d)", err);
     } else {
-        LOG_DBG("CPI re-asserted at %d", val.val1);
+        /* INF, not DBG: the debug build only raises PMW3610_LOG_LEVEL, which is
+         * a different module, so at DBG this line would never print and there
+         * would be no way to tell whether the re-assert ran. */
+        LOG_INF("CPI re-asserted at %d", val.val1);
     }
 }
 
@@ -74,8 +92,14 @@ static K_WORK_DELAYABLE_DEFINE(reassert_work, reassert_cpi);
 static void on_trackball_event(struct input_event *evt) {
     ARG_UNUSED(evt);
 
-    /* Every event pushes the write further out, so it lands once per movement
-     * burst rather than once per report. */
+    /* Each event pushes the write further out, so it lands once per movement
+     * burst rather than once per report - unless the ceiling has expired, in
+     * which case a continuous drag gets one immediately. */
+    if ((uint32_t)(k_uptime_get_32() - last_reassert_ms) >= MAX_INTERVAL_MS) {
+        k_work_reschedule(&reassert_work, K_NO_WAIT);
+        return;
+    }
+
     k_work_reschedule(&reassert_work, K_MSEC(SETTLE_MS));
 }
 
