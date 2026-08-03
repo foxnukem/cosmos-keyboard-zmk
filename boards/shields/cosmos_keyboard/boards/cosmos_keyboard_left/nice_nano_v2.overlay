@@ -81,8 +81,9 @@
         // passed on nearly every sample anyway, so the loss it caused was
         // occasional, not proportional. 1400 was tried on that bad assumption
         // and made slow movement quantize to +-1 counts per sample, which the
-        // host's pointer acceleration then damps into mush.
-        cpi = <2200>;
+        // host's pointer acceleration then damps into mush. That is the floor.
+        // 2000 is one step down from 2200, taken purely for feel.
+        cpi = <2000>;
 
         // Both of these together, never force-awake alone.
         //

@@ -17,11 +17,12 @@
 
 // Wheel clicks per encoder detent: 63 per click, since &msc emits
 // speed * trigger-period-ms / 1000 and its period is 16ms. MOVE_Y is the
-// vertical wheel, MOVE_X the horizontal one used on NAV.
-#define ENC_SCRL_UP   MOVE_Y(378)
-#define ENC_SCRL_DOWN MOVE_Y(-378)
-#define ENC_SCRL_RIGHT MOVE_X(252)
-#define ENC_SCRL_LEFT  MOVE_X(-252)
+// vertical wheel, MOVE_X the horizontal one used on NAV. Step in units of 63
+// to retune - 8 clicks vertical, 5 horizontal.
+#define ENC_SCRL_UP   MOVE_Y(504)
+#define ENC_SCRL_DOWN MOVE_Y(-504)
+#define ENC_SCRL_RIGHT MOVE_X(315)
+#define ENC_SCRL_LEFT  MOVE_X(-315)
 
 / {
     behaviors {
