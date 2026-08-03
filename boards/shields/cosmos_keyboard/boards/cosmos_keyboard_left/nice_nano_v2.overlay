@@ -75,9 +75,11 @@
         // scaling up produces on slow movement. Raising it also lowers the speed
         // at which the sensor's 12-bit delta registers wrap (see REST3 in
         // cosmos_keyboard_left.conf), so it is not a free knob.
-        // Effective: X 2200, Y ~1075 - the keymap trims Y to 7/10 on top of the
+        // Effective: X 1200, Y ~590 - the keymap trims Y to 7/10 on top of the
         // sensor's own ~0.7 raw gain gap between axes. Step 200 to retune.
-        cpi = <2200>;
+        // Halved from 2200: that was propping up the counts REPORT_INTERVAL_MIN=8
+        // was discarding (see cosmos_keyboard_left.conf), which no longer happens.
+        cpi = <1200>;
 
         // No force-awake, deliberately. It is the only thing that enables the
         // driver's activity-state handler, which read-modify-writes PERFORMANCE
