@@ -77,17 +77,34 @@
         // cosmos_keyboard_left.conf), so it is not a free knob.
         // Sets both axes: the keymap no longer scales either one, so this is the
         // only speed knob. Step 200 to retune.
-        // Down from 2200, which was propping up the counts REPORT_INTERVAL_MIN=8
-        // was discarding (see cosmos_keyboard_left.conf). That loss was never
-        // measured, so this is an estimate - retune against the real feel.
-        cpi = <1400>;
+        // Do not cut this to compensate for REPORT_INTERVAL_MIN=8: that gate
+        // passed on nearly every sample anyway, so the loss it caused was
+        // occasional, not proportional. 1400 was tried on that bad assumption
+        // and made slow movement quantize to +-1 counts per sample, which the
+        // host's pointer acceleration then damps into mush.
+        cpi = <2200>;
 
-        // No force-awake, deliberately. It is the only thing that enables the
-        // driver's activity-state handler, which read-modify-writes PERFORMANCE
-        // (0x11) using a read that never turns the sensor's SPI clock on. After
-        // idle that clock is gated, so it can read garbage and write the garbage
-        // run-rate bits back, or leave force-awake stuck on. Wake latency is
-        // covered by the downshift tuning in cosmos_keyboard_left.conf instead.
+        // Both of these together, never force-awake alone.
+        //
+        // Without force-awake the sensor downshifts to a REST mode, which gates
+        // its SPI clock. Motion still fires the IRQ, but pmw3610_read() - unlike
+        // pmw3610_write() - never issues SPI_CLK_ON_REQ, so the burst reads back
+        // the bus overrun character instead. An all-0xff burst decodes to exactly
+        // x=-1 y=-1, and the driver checks neither the MOTION bit nor anything
+        // else, so it reports that as real motion: ~20 samples of -1/-1 drift at
+        // the start of every swipe after a pause.
+        //
+        // force-awake keeps it in RUN while ZMK is ACTIVE so the clock is never
+        // gated. Alone it is unsafe - the activity-state handler would
+        // read-modify-write PERFORMANCE (0x11) through that same unclocked read
+        // and write the garbage back. force-awake-4ms-mode makes that path write
+        // a constant 0x0d instead, so the bad read never reaches the write.
+        //
+        // Costs battery: the sensor stays in RUN at a 4ms sample rate whenever
+        // ZMK is active. The downshift table in cosmos_keyboard_left.conf now
+        // only applies once ZMK reaches IDLE/SLEEP.
+        force-awake;
+        force-awake-4ms-mode;
 
         // Leave these off - orientation is done in the keymap by
         // &zip_xy_transform. The driver packs swap/invert into the same
