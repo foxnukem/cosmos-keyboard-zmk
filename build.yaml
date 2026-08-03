@@ -5,21 +5,31 @@ include:
   - board: nice_nano_v2
     shield: cosmos_keyboard_left
 
-## Trackball debug build - comment out again once done measuring.
+## Trackball debug build - uncomment the block below to bring it back.
 ## Logs one `x/y: %d/%d` line per sensor sample over USB serial (raw, before any
 ## input processor), the CPI and downshift writes at init, and the CPI re-asserts
 ## from src/pmw3610_cpi_reassert.c. The snippet is required: PMW3610_LOG_LEVEL_DBG
 ## needs a cdc-acm node and a zephyr,console entry, so as bare Kconfig in a .conf
-## the build aborts. Note the log buffer overruns during sustained motion, so
+## the build aborts.
+##
+## THIS BUILD PERTURBS WHAT IT MEASURES. Logging every sample adds enough
+## scheduler latency to break the multi-chunk SPI burst read mid-transaction, so
+## the tail comes back as the 0xff overrun character - which decodes to exactly
+## x=-1 y=-1 and is reported as real motion, because the driver checks neither
+## the MOTION bit nor anything else. Symptom is a -1/-1 flood and the cursor
+## flying to a corner, present only while a terminal is attached to the port.
+## Discard -1/-1 runs from any sums, and confirm every fault with the cable out
+## before believing it. The log buffer also overruns during sustained motion, so
 ## timestamp gaps are only trustworthy while no `messages dropped` lines appear.
+##
 ## Shutter is NOT logged - the driver only reads it under SMART_ALGORITHM, and
 ## even then never prints it. Measuring it needs a driver patch.
 
-  - board: nice_nano_v2
-    shield: cosmos_keyboard_left
-    snippet: zmk-usb-logging
-    cmake-args: -DCONFIG_PMW3610_LOG_LEVEL_DBG=y
-    artifact-name: cosmos_keyboard_left_trackball_debug
+#  - board: nice_nano_v2
+#    shield: cosmos_keyboard_left
+#    snippet: zmk-usb-logging
+#    cmake-args: -DCONFIG_PMW3610_LOG_LEVEL_DBG=y
+#    artifact-name: cosmos_keyboard_left_trackball_debug
 
 ## To build with ZMK Studio support, uncomment the following block
 ## by removing the leading '#' from each line.
