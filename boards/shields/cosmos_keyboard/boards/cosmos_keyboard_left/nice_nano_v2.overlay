@@ -82,8 +82,8 @@
         // occasional, not proportional. 1400 was tried on that bad assumption
         // and made slow movement quantize to +-1 counts per sample, which the
         // host's pointer acceleration then damps into mush. That is the floor.
-        // 2000 is one step down from 2200, taken purely for feel.
-        cpi = <2000>;
+        // 2000 was tried for feel and reverted - 2200 is the settled value.
+        cpi = <2200>;
 
         // Both of these together, never force-awake alone.
         //
