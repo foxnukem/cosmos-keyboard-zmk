@@ -11,12 +11,9 @@
 // everything after it.
 #define BASE        0
 #define NAV         1
-#define MOUSE       2  // trackball-activated, owned by zip_temp_layer
-#define NUM         3
-#define SYS         4
-#define MOUSE_HOLD  5  // thumb-key activated, owned by &mo. Must stay separate
-                       // from MOUSE: zip_temp_layer's timeout deactivates its
-                       // layer unconditionally, which would drop a held layer.
+#define NUM         2
+#define SYS         3
+#define MOUSE_HOLD  4  // thumb-key activated, owned by &mo
 
 // Wheel clicks per encoder detent: 63 per click, since &msc emits
 // speed * trigger-period-ms / 1000 and its period is 16ms. MOVE_Y is the
@@ -25,22 +22,6 @@
 #define ENC_SCRL_DOWN MOVE_Y(-252)
 #define ENC_SCRL_RIGHT MOVE_X(189)
 #define ENC_SCRL_LEFT  MOVE_X(-189)
-
-// Expanded into both MOUSE and MOUSE_HOLD, which must stay identical. Edit
-// here, never the layer nodes.
-#define MOUSE_LAYER_BINDINGS                                                                      \
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans  \
-&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans     &trans     &mkp MB4   &mkp MB5   &trans  &trans  \
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &mkp LCLK  &mkp MCLK  &mkp RCLK  &trans  &trans  \
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans  \
-                &trans  &trans                                                          &trans     &trans             \
-                        &trans  &trans  &trans                    &mkp LCLK  &trans     &mkp RCLK                     \
-                        &trans  &trans                            &trans
-
-#define MOUSE_LAYER_SENSORS                                                                         \
-                <&inc_dec_kp C_VOL_UP C_VOL_DN>,                                                    \
-                <&inc_dec_kp C_VOL_UP C_VOL_DN>,                                                    \
-                <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>
 
 / {
     behaviors {
@@ -77,8 +58,8 @@
 &kp CAPS   &kp A   &kp S      &kp D      &kp F      &kp G                               &kp H      &kp J   &kp K      &kp L     &kp SEMI  &kp APOS
 &kp LSHFT  &kp Z   &kp X      &kp C      &kp V      &kp B                               &kp N      &kp M   &kp COMMA  &kp DOT   &kp FSLH  &kp RSHFT
                    &kp MINUS  &kp EQUAL                                                                    &kp LBKT   &kp RBKT
-                              &mo 1      &kp SPACE  &kp LGUI                            &kp SPACE  &mo 5   &kp ENTER
-                              &kp LCTRL  &kp LALT                                       &mo 3
+                              &mo NAV    &kp SPACE  &kp LGUI                            &kp SPACE  &mo MOUSE_HOLD  &kp ENTER
+                              &kp LCTRL  &kp LALT                                       &mo NUM
             >;
 
             sensor-bindings =
@@ -105,13 +86,6 @@
                 <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                 <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                 <&inc_dec_msc ENC_SCRL_RIGHT ENC_SCRL_LEFT>;
-        };
-
-        // Raised automatically while the trackball moves, by zip_temp_layer.
-        mouse {
-            display-name = "MOUSE";
-            bindings = <MOUSE_LAYER_BINDINGS>;
-            sensor-bindings = MOUSE_LAYER_SENSORS;
         };
 
         num {
@@ -145,35 +119,26 @@
                 <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
 
-        // Identical to `mouse`, but held via &mo instead. Same display name on
-        // purpose - the OLED should read the same either way.
+        // Held via &mo on the right thumb - the only way to mouse buttons now
+        // that the trackball no longer raises a layer by itself.
         mouse_hold {
             display-name = "MOUSE";
-            bindings = <MOUSE_LAYER_BINDINGS>;
-            sensor-bindings = MOUSE_LAYER_SENSORS;
+            bindings = <
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans     &trans     &mkp MB4   &mkp MB5   &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &mkp LCLK  &mkp MCLK  &mkp RCLK  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans
+                &trans  &trans                                                          &trans     &trans
+                        &trans  &trans  &trans                    &mkp LCLK  &trans     &mkp RCLK
+                        &trans  &trans                            &trans
+            >;
+
+            sensor-bindings =
+                <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                <&inc_dec_kp C_VOL_UP C_VOL_DN>,
+                <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
     };
-};
-
-// Any key press at a position NOT listed here drops the temp layer on keydown,
-// so every button the MOUSE layer defines has to be listed or it deactivates
-// the layer it needs and falls through to the layer below.
-//
-// Indices into the bindings array, rows of 12/14/12/12/4/6/3:
-//   22, 23     - MB4, MB5              (row 2, under I and O)
-//   33, 34, 35 - LCLK, MCLK, RCLK      (row 3, under J, K, L)
-//   57, 58, 59 - LCLK, mo, RCLK        (right thumb cluster)
-// Re-count these whenever the MOUSE layer gains or moves a button.
-//
-// require-prior-idle-ms must be non-zero or the keycode hook is not compiled in
-// at all, and nothing stops ball jitter raising MOUSE while typing - which turns
-// J into &mkp LCLK and warps the vim cursor to the pointer. 500ms because the
-// timestamp only updates on real key events, not host auto-repeat, so a shorter
-// guard expires during a held key or a pause between navigation bursts.
-// Pointer movement is not gated by the layer, so this only delays the remap.
-&zip_temp_layer {
-    excluded-positions = <22 23 33 34 35 57 58 59>;
-    require-prior-idle-ms = <500>;
 };
 
 // The sensor is wired to the left half; this listener runs on the right.
@@ -203,9 +168,9 @@
     // fed by the weak axis, so 0.7 of the trim is already there for free and
     // the scaler multiplies on top of it:
     //   screenX : screenY = 1.43 * (d/m)
-    // 7/10 gives ~2:1 at X 1800 / Y ~880. A wide screen wants ~2.4:1, which is
-    // 3/5 - but that drops Y to ~756. Holding Y near 1260 at 2.4:1 needs the
-    // speed from cpi instead: cpi 3000 with 3/5.
+    // 7/10 gives ~2:1 at the current X 1200 / Y ~590. A wide screen wants
+    // ~2.4:1, which is 3/5 - but that drops Y further. Holding Y at 2.4:1 needs
+    // the speed back from cpi instead.
     //
     // Keep the multiplier small. scale_val() truncates event->value * mul to
     // int16_t, so a larger one shrinks the headroom before the sign wraps -
@@ -214,6 +179,5 @@
     // Transform must precede the scaler: the swap rewrites the event code, so
     // ordered this way the trim lands on screen-vertical rather than sensor-Y.
     input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
-                       <&zip_y_scaler 7 10>,
-                       <&zip_temp_layer MOUSE 200>;
+                       <&zip_y_scaler 7 10>;
 };
