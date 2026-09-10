@@ -14,6 +14,7 @@
 #define NUM         2
 #define SYS         3
 #define MOUSE_HOLD  4  // thumb-key activated, owned by &mo
+#define SNIPER      5  // raised from MOUSE_HOLD; slows the ball via the listener override
 
 // Wheel clicks per encoder detent: 63 per click, since &msc emits
 // speed * trigger-period-ms / 1000 and its period is 16ms. MOVE_Y is the
@@ -125,10 +126,10 @@
         mouse_hold {
             display-name = "MOUSE";
             bindings = <
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans     &trans     &mkp MB4   &mkp MB5   &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &mkp LCLK  &mkp MCLK  &mkp RCLK  &trans  &trans
-&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans      &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans     &trans     &mkp MB4   &mkp MB5   &trans      &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &mkp LCLK  &mkp MCLK  &mkp RCLK  &mo SNIPER  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans     &trans     &trans     &trans     &trans      &trans
                 &trans  &trans                                                          &trans     &trans
                         &trans  &trans  &trans                    &mkp LCLK  &trans     &mkp RCLK
                         &trans  &trans                            &trans
@@ -138,6 +139,22 @@
                 <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                 <&inc_dec_kp C_VOL_UP C_VOL_DN>,
                 <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
+        };
+
+        // Exists only to be named by the &input_listener_left0 override below.
+        // All &trans so the mouse buttons under it stay live; no
+        // sensor-bindings, so the encoders fall through to MOUSE.
+        sniper {
+            display-name = "SNIPER";
+            bindings = <
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans  &trans    &trans  &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans  &trans
+&trans  &trans  &trans  &trans  &trans  &trans                    &trans  &trans  &trans  &trans  &trans  &trans
+                &trans  &trans                                                    &trans  &trans
+                        &trans  &trans  &trans                    &trans  &trans  &trans
+                        &trans  &trans                            &trans
+            >;
         };
     };
 };
@@ -176,4 +193,22 @@
     // compensate. Do NOT scale an axis up: 1c7fac5 found that amplifies
     // quantization into a 1,2,1,2 px wobble on slow movement.
     input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>;
+
+    // Sniper mode. Not done by dropping cpi: pmw3610_cpi_reassert.c writes it
+    // back 300ms after motion stops, and the sensor is on the peripheral with no
+    // split channel to carry a sensor attribute from this half.
+    //
+    // process-next is required - without it the listener returns after this
+    // override and the base X_INVERT is skipped, so the cursor goes left while
+    // the key is held. The scaler then runs before the transform, which is safe
+    // only because the transform is a pure negation with no XY_SWAP.
+    //
+    // Retune with the divisor alone, max 16. Never a multiplier: 1c7fac5 found
+    // upscaling turns quantization into a 1,2,1,2 px wobble. track-remainders on
+    // the stock scaler keeps sub-count movement from being dropped.
+    sniper {
+        layers = <SNIPER>;
+        process-next;
+        input-processors = <&zip_xy_scaler 1 2>;
+    };
 };
