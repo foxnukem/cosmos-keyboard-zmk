@@ -211,4 +211,24 @@
         process-next;
         input-processors = <&zip_xy_scaler 1 2>;
     };
+
+    // Trackball scrolls while NUM is held. Order is load-bearing: transform and
+    // xy-scaler match X/Y only, scroll-scaler matches wheel only, so the mapper
+    // splits the list in two. Listed after sniper so that holding both gives a
+    // half-speed scroll rather than shadowing it.
+    //
+    // No process-next, unlike sniper: child processors run before the base list,
+    // so the mapper would rewrite the codes out from under the base X_INVERT and
+    // reverse horizontal scroll. Hence the repeated transform.
+    //
+    // Divisor split across two stages: the documented ceiling is 16 and cpi 2200
+    // needs ~64 for 34 clicks/inch. Reusing &zip_xy_scaler is safe, remainder
+    // state is per config entry. Retune with either stage.
+    scroll {
+        layers = <NUM>;
+        input-processors = <&zip_xy_transform INPUT_TRANSFORM_X_INVERT>,
+                           <&zip_xy_scaler 1 8>,
+                           <&zip_xy_to_scroll_mapper>,
+                           <&zip_scroll_scaler 1 8>;
+    };
 };
