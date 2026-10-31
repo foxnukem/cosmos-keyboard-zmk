@@ -13,8 +13,7 @@
 #define BASE        0
 #define NAV         1
 #define SYS         2
-#define MOUSE       3  // thumb-key activated, owned by &mo
-#define SNIPER      4  // raised from MOUSE_HOLD; slows the ball via the listener override
+#define SNIPER      3  // raised from MOUSE_HOLD; slows the ball via the listener override
 
 // Wheel clicks per encoder detent: 63 per click, since &msc emits
 // speed * trigger-period-ms / 1000 and its period is 16ms. MOVE_Y is the
@@ -45,8 +44,6 @@
 
     combos {
         compatible = "zmk,combos";
-
-        // Both thumb layer keys together - the only way onto SYS.
     };
 
     keymap {
@@ -109,8 +106,6 @@
                 <&inc_dec_msc ENC_SCRL_DOWN ENC_SCRL_UP>;
         };
 
-        // Held via &mo on the right thumb - the only way to mouse buttons now
-        // that the trackball no longer raises a layer by itself.
         // Exists only to be named by the &input_listener_left0 override below.
         // All &trans so the mouse buttons under it stay live; no
         // sensor-bindings, so the encoders fall through to MOUSE.
@@ -186,7 +181,7 @@
         input-processors = <&zip_xy_scaler 1 2>;
     };
 
-    // Trackball scrolls while SYS is held. Order is load-bearing: xy-scaler
+    // Trackball scrolls while NAV is held. Order is load-bearing: xy-scaler
     // matches X/Y only, scroll-scaler matches wheel only, so the mapper splits
     // the list in two. Listed after sniper so that holding both gives a
     // half-speed scroll rather than shadowing it.
@@ -200,7 +195,7 @@
     // state is per config entry. Retune with either stage.
 
     scroll {
-        layers = <SYS>;
+        layers = <NAV>;
         input-processors =
             <&zip_xy_scaler 1 8>,
             <&zip_xy_to_scroll_mapper>,
